@@ -1,0 +1,32 @@
+FLOAT_LIBS = `${R_HOME}/bin/Rscript -e "float:::ldflags()"`
+FLOAT_INCL = `${R_HOME}/bin/Rscript -e "float:::cppflags()"`
+
+SPMD_CPPFLAGS = @SPMD_CPPFLAGS@
+SPMD_LDFLAGS = @SPMD_LDFLAGS@
+
+R_CPPFLAGS = @R_CPPFLAGS@
+
+BACKEND = @BACKEND@
+
+NVCC = @NVCC@
+CUDA_CFLAGS = @CUDA_CFLAGS@
+CUDA_LDFLAGS = @CUDA_LDFLAGS@
+PKG_LIBS_ADDFLAGS = $(CUDA_LDFLAGS) -lcudart -lcublas -lcusolver
+DIMR_OBJS = crossprod.o init.o svd.o
+
+PKG_CFLAGS = $(SPMD_CPPFLAGS)
+PKG_CXXFLAGS = $(SPMD_CPPFLAGS)
+PKG_LIBS = $(FLOAT_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(SPMD_LDFLAGS) $(PKG_LIBS_ADDFLAGS)
+
+R_OBJS = dimrgame_native.o
+OBJECTS = $(DIMR_OBJS) $(R_OBJS)
+
+
+all: $(SHLIB)
+
+%.o: %.cu
+	$(NVCC) -DGPU -O2 -x cu -c -arch=sm_61 -Xcompiler "-fPIC $(FLOAT_INCL) $(R_CPPFLAGS) $(SPMD_CPPFLAGS)" $< -o $@
+
+
+clean:
+	@rm -rf *.o *.so *.dll Makevars $(USER_CONF) $(SHLIB) $(OBJECTS)
