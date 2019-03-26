@@ -1,3 +1,13 @@
+#' svd_game
+#' 
+#' Singular value decomposition on a gpu.
+#' 
+#' @param x
+#' A shaq.
+#' 
+#' @return
+#' A named list, as in kazaam (which mimics R's \code{svd()}).
+#' 
 #' @useDynLib dimrgame R_svd
 #' @export
 svd_game = function(x)
@@ -14,7 +24,7 @@ svd_game = function(x)
       storage.mode(data) = "double"
   }
   
-  #FIXME
+  # TODO
   retu = FALSE
   retv = FALSE
   
