@@ -1,0 +1,9 @@
+*~
+*.swp
+
+*.o
+*.so
+
+src/Makevars
+
+aclocal.m4
