@@ -17,16 +17,13 @@ The development version is maintained on GitHub:
 remotes::install_github("RBigData/dimrgame")
 ```
 
-You will need to have an installation of CUDA to build the package. You can download CUDA from the [nvidia website](https://developer.nvidia.com/cuda-downloads). You will also need the development version of the pbdMPI and kazaam packages (and optionally the curand R package):
+You will need to have an installation of CUDA to build the package. You can download CUDA from the [nvidia website](https://developer.nvidia.com/cuda-downloads). You will also need the development versions float, pbdMPI, and kazaam (and optionally the curand R package which is used in some scripts):
 
 ```r
-remotes::install_github("wrathematics/pbdMPI")
+remotes::install_github("wrathematics/float")
+remotes::install_github("snoweye/pbdMPI")
 remotes::install_github("rbigdata/kazaam")
 remotes::install_github("wrathematics/curand")
 ```
 
-There is a reference cpu version of the package that you can build. However, this is not supported or recommended; please just use kazaam. But if you insist, you can install it via
-
-```r
-remotes::install_github("rbigdata/dimrgame", configure.args="--with-backend=CPU")
-```
+Unlike glmrgame and clustrgame, there is no reference CPU version of the code. If you don't have a gpu, just use kazaam instead.
