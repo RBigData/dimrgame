@@ -59,35 +59,51 @@ __global__ static void revsqrt(const int n, double *x)
 
 
 
-static inline void cu_syevd(cusolverDnHandle_t handle, cusolverEigMode_t jobz,
-  cublasFillMode_t uplo, int n, float *x, float *values, eigen_err_t *err)
+static inline cusolverStatus_t cusolver_syevd_buffersize(cusolverDnHandle_t handle,
+  cusolverEigMode_t jobz, cublasFillMode_t uplo, int n, float *x, float *values,
+  int *lwork)
 {
-  int lwork;
-  int *info_gpu;
-  float *work;
-  
-  err->status = cusolverDnSsyevd_bufferSize(handle, jobz, uplo, n, x, n, values, &lwork);
-  cudaMalloc(&work, lwork*sizeof(*work));
-  cudaMalloc(&info_gpu, sizeof(*info_gpu));
-  
-  err->status = cusolverDnSsyevd(handle, jobz, uplo, n, x, n, values, work, lwork, info_gpu);
-  cudaMemcpy(&(err->info), info_gpu, sizeof(*info_gpu), cudaMemcpyDeviceToHost);
-  cudaFree(work);
-  cudaFree(info_gpu);
+  return cusolverDnSsyevd_bufferSize(handle, jobz, uplo, n, x, n, values, lwork);
 }
 
-static inline void cu_syevd(cusolverDnHandle_t handle, cusolverEigMode_t jobz,
-  cublasFillMode_t uplo, int n, double *x, double *values, eigen_err_t *err)
+static inline cusolverStatus_t cusolver_syevd_buffersize(cusolverDnHandle_t handle,
+  cusolverEigMode_t jobz, cublasFillMode_t uplo, int n, double *x, double *values,
+  int *lwork)
+{
+  return cusolverDnDsyevd_bufferSize(handle, jobz, uplo, n, x, n, values, lwork);
+}
+
+
+
+static inline cusolverStatus_t cusolver_syevd(cusolverDnHandle_t handle,
+  cusolverEigMode_t jobz, cublasFillMode_t uplo, int n, float *x, float *values,
+  float *work, int lwork, int *info_gpu)
+{
+  return cusolverDnSsyevd(handle, jobz, uplo, n, x, n, values, work, lwork, info_gpu);
+}
+
+static inline cusolverStatus_t cusolver_syevd(cusolverDnHandle_t handle,
+  cusolverEigMode_t jobz, cublasFillMode_t uplo, int n, double *x, double *values,
+  double *work, int lwork, int *info_gpu)
+{
+  return cusolverDnDsyevd(handle, jobz, uplo, n, x, n, values, work, lwork, info_gpu);
+}
+
+
+
+template <typename REAL>
+static inline void syevd_gpu(cusolverDnHandle_t handle, cusolverEigMode_t jobz,
+  cublasFillMode_t uplo, int n, REAL *x, REAL *values, eigen_err_t *err)
 {
   int lwork;
   int *info_gpu;
-  double *work;
+  REAL *work;
   
-  err->status = cusolverDnDsyevd_bufferSize(handle, jobz, uplo, n, x, n, values, &lwork);
+  err->status = cusolver_syevd_buffersize(handle, jobz, uplo, n, x, values, &lwork);
   cudaMalloc(&work, lwork*sizeof(*work));
   cudaMalloc(&info_gpu, sizeof(*info_gpu));
   
-  err->status = cusolverDnDsyevd(handle, jobz, uplo, n, x, n, values, work, lwork, info_gpu);
+  err->status = cusolver_syevd(handle, jobz, uplo, n, x, values, work, lwork, info_gpu);
   cudaMemcpy(&(err->info), info_gpu, sizeof(*info_gpu), cudaMemcpyDeviceToHost);
   cudaFree(work);
   cudaFree(info_gpu);
@@ -99,14 +115,13 @@ template <typename REAL>
 static inline eigen_err_t eigen(int only_values, int n, REAL *const restrict x, REAL *const restrict values)
 {
   eigen_err_t err;
-  
   cusolverDnHandle_t handle;
   
   cusolverEigMode_t jobz = only_values ? CUSOLVER_EIG_MODE_NOVECTOR : CUSOLVER_EIG_MODE_VECTOR;
   cublasFillMode_t uplo = CUBLAS_FILL_MODE_UPPER;
   
   err.status = cusolverDnCreate(&handle);
-  cu_syevd(handle, jobz, uplo, n, x, values, &err);
+  syevd_gpu(handle, jobz, uplo, n, x, values, &err);
   err.status = cusolverDnDestroy(handle);
   
   revsqrt<<<1, n, n*sizeof(*values)>>>(n, values);
