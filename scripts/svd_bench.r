@@ -5,7 +5,7 @@ suppressMessages(library(dimrgame))
 .pbd_env$SPMD.CT$print.quiet = TRUE
 comm.cat("----------- svd -----------\n")
 
-m = 1000000
+m = 2000000
 n = 250
 
 if (comm.rank() == 0){
