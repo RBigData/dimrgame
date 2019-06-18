@@ -19,12 +19,29 @@ typedef struct eigen_err_t
 } eigen_err_t;
 
 
-#define EIGEN_CHECK_STATUS(status) (status == CUSOLVER_STATUS_SUCCESS)
-#define EIGEN_CHECK_CUERR(code) (code == cudaSuccess)
-#define EIGEN_CHECK_INFO(info) (info == 0)
+
+static inline void eigen_err_init(eigen_err_t *err)
+{
+  err->status = CUSOLVER_STATUS_SUCCESS;
+  err->code = cudaSuccess;
+  err->info = 0;
+}
 
 
 
+#define EIGEN_CHECK(err) if(!eigen_err_check(err)) return err;
+
+static inline bool eigen_err_check(eigen_err_t err)
+{
+  if (err.status != CUSOLVER_STATUS_SUCCESS || err.code != cudaSuccess || err.info != 0)
+    return true;
+  else
+    return false;
+}
+
+
+
+// NOTE can't template because of extern temp storage
 __global__ static void revsqrt(const int n, float *x)
 {
   extern __shared__ float sf[];
@@ -104,8 +121,9 @@ static inline void syevd_gpu(cusolverDnHandle_t handle, cusolverEigMode_t jobz,
   cudaMalloc(&info_gpu, sizeof(*info_gpu));
   
   err->status = cusolver_syevd(handle, jobz, uplo, n, x, values, work, lwork, info_gpu);
-  cudaMemcpy(&(err->info), info_gpu, sizeof(*info_gpu), cudaMemcpyDeviceToHost);
   cudaFree(work);
+  
+  cudaMemcpy(&(err->info), info_gpu, sizeof(*info_gpu), cudaMemcpyDeviceToHost);
   cudaFree(info_gpu);
 }
 
@@ -117,12 +135,19 @@ static inline eigen_err_t eigen(int only_values, int n, REAL *const restrict x, 
   eigen_err_t err;
   cusolverDnHandle_t handle;
   
+  eigen_err_init(&err);
+  
   cusolverEigMode_t jobz = only_values ? CUSOLVER_EIG_MODE_NOVECTOR : CUSOLVER_EIG_MODE_VECTOR;
   cublasFillMode_t uplo = CUBLAS_FILL_MODE_UPPER;
   
   err.status = cusolverDnCreate(&handle);
+  EIGEN_CHECK(err);
+  
   syevd_gpu(handle, jobz, uplo, n, x, values, &err);
+  EIGEN_CHECK(err);
+  
   err.status = cusolverDnDestroy(handle);
+  EIGEN_CHECK(err);
   
   revsqrt<<<1, n, n*sizeof(*values)>>>(n, values);
   

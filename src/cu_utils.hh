@@ -5,9 +5,9 @@
 #include <cuda_runtime.h>
 
 #define TPB 512
-
 #define CUFREE(x) {if(x)cudaFree(x);}
-#define PRINT_CUDA_ERROR() printf("%s\n", cudaGetErrorString(cudaGetLastError()));
+#define CUDA_ERR_MALLOC_MSG "Unable to allocate device memory"
+
 
 static inline int get_num_blocks(const int m)
 {
