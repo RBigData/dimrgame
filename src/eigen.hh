@@ -41,6 +41,35 @@ static inline bool eigen_err_check(eigen_err_t err)
 
 
 
+static inline void eigen_err_throw(eigen_err_t err)
+{
+  if (err.status != CUSOLVER_STATUS_SUCCESS)
+  {
+    if (err.status == CUSOLVER_STATUS_NOT_INITIALIZED)
+      error("cuSolver could not be initialized");
+    else if (err.status == CUSOLVER_STATUS_ALLOC_FAILED)
+      error("cuSolver could not successfully allocate memory");
+    else if (err.status == CUSOLVER_STATUS_INVALID_VALUE)
+      error("cuSolver function received invalid input value");
+    else if (err.status == CUSOLVER_STATUS_ARCH_MISMATCH)
+      error("cuSolver requires feature missing from device arch");
+    else if (err.status == CUSOLVER_STATUS_EXECUTION_FAILED)
+      error("cuSolver failed to execute");
+    else if (err.status == CUSOLVER_STATUS_INTERNAL_ERROR)
+      error("cuSolver experienced an internal error");
+    else if (err.status == CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED)
+      error("cuSolver received unsupported matrix type");
+    else
+      error("unknown cuSolver error");
+  }
+  else if (err.code != cudaSuccess)
+    error(""); // TODO
+  else if (err.info != 0)
+    error("syevd returned info=%d", err.info);
+}
+
+
+
 // NOTE can't template because of extern temp storage
 __global__ static void revsqrt(const int n, float *x)
 {
